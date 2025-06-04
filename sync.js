@@ -23,8 +23,7 @@ const notion = new Client({ auth: NOTION_TOKEN });
 
 /**
  * 1. 获取“钱包”库里 Relation 为空且最近 24 小时新增的记录
- *    使用一个 proper filter 对象，其中 and 数组必须嵌套到 filter 里，
- *    而不能像顶层属性那样直接写 and: [ … ]。
+ *    注意：created_time 需要写在 filter 的顶层，而不是作为 property。
  */
 async function fetchUnlinkedWalletEntries() {
   const results = [];
@@ -39,14 +38,13 @@ async function fetchUnlinkedWalletEntries() {
       start_cursor: cursor,
       page_size: 50,
       filter: {
-        // 这里用一个对象把 and 数组包含进去：
         and: [
           {
             property: '关联',
             relation: { is_empty: true }
           },
           {
-            property: '创建时间',        // Notion 默认给每条条目都有一个 “Created time” 字段
+            // 这里直接使用 created_time，而不是 property: '创建时间'
             created_time: { after: yesterdayISO }
           }
         ]
@@ -64,7 +62,6 @@ async function fetchUnlinkedWalletEntries() {
  * 2. 在“每日活动”库里查找与记账日期相同的页面
  */
 async function findDailyPageByDate(walletDate) {
-  // 把 walletDate（例如 “2025-06-04T08:00:00.000Z”）格式化为 “YYYY-MM-DD”
   const isoDate = dayjs(walletDate).format('YYYY-MM-DD');
 
   const response = await notion.databases.query({
@@ -81,17 +78,14 @@ async function findDailyPageByDate(walletDate) {
  * 3. 追加 Relation，把钱包 page_id 加到“每日活动”页面的 Relation 数组里
  */
 async function appendRelationToDaily(dailyPageId, walletPageId) {
-  // 先检索该 “每日活动” 页面，获取现有的 Relation 列表
   const page = await notion.pages.retrieve({ page_id: dailyPageId });
   const currentRelations = page.properties[DAILY_RELATION_PROPERTY].relation || [];
 
-  // 如果已经关联过，就跳过
   if (currentRelations.some(rel => rel.id === walletPageId)) {
     console.log(`🔗 ${walletPageId} 已在 ${dailyPageId} 关联中，跳过`);
     return;
   }
 
-  // 追加新的 relation
   const newRelations = [...currentRelations, { id: walletPageId }];
 
   await notion.pages.update({
@@ -123,14 +117,12 @@ async function appendRelationToDaily(dailyPageId, walletPageId) {
       }
       const walletDate = dateProp.date.start;
 
-      // 在“每日活动”里查找对应日期的页面
       const dailyPage = await findDailyPageByDate(walletDate);
       if (!dailyPage) {
         console.warn(`❌ 未找到“每日活动”中 日期=${walletDate} 的页面，跳过 Wallet ${walletPageId}`);
         continue;
       }
 
-      // 追加关联
       await appendRelationToDaily(dailyPage.id, walletPageId);
     }
 
