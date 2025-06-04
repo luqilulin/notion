@@ -1,0 +1,13 @@
+{
+  "name": "notion-edu-sync",
+  "version": "1.0.0",
+  "description": "自动将 Notion 钱包库记录关联到每日活动，并触发 Rollup 汇总",
+  "main": "sync.js",
+  "scripts": {
+    "start": "node sync.js"
+  },
+  "dependencies": {
+    "@notionhq/client": "^3.9.0",
+    "dayjs": "^1.11.7"
+  }
+}
