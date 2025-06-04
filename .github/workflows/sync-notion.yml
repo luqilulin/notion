@@ -1,0 +1,33 @@
+name: Notion 自动同步钱包到每日活动
+
+# 定时触发：每天 UTC 01:00（北京时间 09:00）执行一次
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  # 同时支持手动触发
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    name: 运行同步脚本
+    runs-on: ubuntu-latest
+
+    env:
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      NOTION_DB_WALLET_ID: ${{ secrets.NOTION_DB_WALLET_ID }}
+      NOTION_DB_DAILY_ID: ${{ secrets.NOTION_DB_DAILY_ID }}
+
+    steps:
+      - name: Checkout 仓库代码
+        uses: actions/checkout@v3
+
+      - name: 设置 Node.js v18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: 安装依赖
+        run: npm install
+
+      - name: 执行 sync.js
+        run: node sync.js
