@@ -55,6 +55,10 @@ async function findDailyPageByDate(walletDate) {
     filter: {
       property: '日期',
       date: { equals: isoDate }
+      and: [
+    { property: '当日支出关联', relation: { is_empty: true } },
+    { property: '创建时间', created_time: { after: dayjs().subtract(1, 'day').toISOString() } }
+  ]
     }
   });
   return response.results.length > 0 ? response.results[0] : null;
